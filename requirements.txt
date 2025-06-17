@@ -4,3 +4,4 @@ Pillow
 Requests
 torch
 volcengine-python-sdk[ark]
+volcengine
