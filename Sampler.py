@@ -8,13 +8,17 @@ import base64
 from PIL import Image
 import io
 import torch
+import json
 import numpy as np
 from volcenginesdkarkruntime import Ark
+from volcengine.visual.VisualService import VisualService
 
 class LuoT2V:
     """
     文生视频
     """
+    def __init__(self):
+        print("LuoT2V 节点已初始化！") # 添加这一行
     modellist = ["doubao-seedance-1-0-pro-250528"]
     resolutionlist = ["480p", "720p", "1080p"]
     ratiolist = ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16", "9:21"]
@@ -31,7 +35,7 @@ class LuoT2V:
                         "default": "请输入详细的画面描述，例如：戴着帽子的老爷爷面带微笑往前走。",
                     },
                 ),
-                "model": ((s.modellist,)), 
+                "model": ((s.modellist,)),
                 # "model": ("STRING", {"default": "请在此处粘贴您的火山引擎模型名称"}),
                 "resolution": ((s.resolutionlist,)),  # 视频分辨率
                 "ratio": ((s.ratiolist,)),  # 生成视频的宽高比例
@@ -115,12 +119,15 @@ class LuoT2V:
             )
         }
 
+
 class LuoT2I:
     """
     文生图
     """
+
     def __init__(self):
-        pass
+         print("LuoT2I 节点已初始化！") # 添加这一行
+
     RESOLUTIONS = [
         "1024x1024",
         "864x1152",
@@ -131,37 +138,31 @@ class LuoT2I:
         "1248x832",
         "1512x648",
     ]
-    modellist =[
-        "doubao-seedream-3-0-t2i-250415"
-    ]
+    modellist = ["doubao-seedream-3-0-t2i-250415", "jimeng_high_aes_general_v21_L"]
+
     @classmethod
     def INPUT_TYPES(s):
-        """
-        返回一个包含所有输入字段配置的字典。
-        一些类型（字符串）："MODEL", "VAE", "CLIP", "CONDITIONING", "LATENT", "IMAGE", "INT", "STRING", "FLOAT"。
-        输入类型 "INT", "STRING" 或 "FLOAT" 是节点上字段的特殊值。
-        类型可以是一个列表，用于提供下拉选择。
-
-        返回: `dict`:
-            - 键 input_fields_group (`string`): 可以是 "required"（必需）、"hidden"（隐藏）或 "optional"（可选）。一个节点类必须有 "required" 属性。
-            - 值 input_fields (`dict`): 包含输入字段的配置：
-                * 键 field_name (`string`): 入口方法参数的名称。
-                * 值 field_config (`tuple`):
-                    + 第一个值是表示字段类型的字符串，或者是一个用于下拉选择的列表。
-                    + 第二个值是为 "INT", "STRING" 或 "FLOAT" 类型准备的配置字典。
-        """
         return {
             "required": {
-                "prompt": ("STRING", {"multiline": True, "default": "请输入详细的画面描述，例如：一只可爱的猫咪，背景是星空。"}),
-                # "model": ("STRING", {"default": "请在此处粘贴您的火山引擎模型名称"}),
-                "model": ((s.modellist,)), 
-                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffff}),
-                # "mode": (["固定", "递增", "递减", "随机"],),
-                "APIKey": ("STRING", {"default": "请在此处粘贴您的火山引擎API Key"}),#ae01b368-48a0-48df-9e49-5173741a1ef9
-                # "resolution" 是输入参数的内部名称
-                # (s.RESOLUTIONS,) 是一个元组，第一个元素是包含所有选项字符串的列表
-                # 这会告诉 ComfyUI 创建一个下拉框
-                "size": (s.RESOLUTIONS,),
+                "prompt": (
+                    "STRING",
+                    {
+                        "multiline": True,
+                        "default": "请输入详细的画面描述，例如：一只可爱的猫咪，背景是星空。",
+                    },
+                ),
+                "model": ((s.modellist,)),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0xFFFFFFFFFFFF}),
+                "APIKey": (
+                    "STRING",
+                    {"default": "请在此处粘贴您的火山引擎AccessKeyID"},
+                ),
+                "width":  ("INT", {"default": 512, "min": 0, "max": 0xFFFFFFFFFFFF}),
+                "height": ("INT", {"default": 512, "min": 0, "max": 0xFFFFFFFFFFFF}),
+                "SecretAccessKey": (
+                    "STRING",
+                    {"default": "请在此处粘贴您的SecretAccessKey(调用即梦模型才需要)"},
+                ),
             },
         }
 
@@ -169,11 +170,9 @@ class LuoT2I:
 
     FUNCTION = "test"
 
-
     CATEGORY = "LuoImage"
 
-    def test(self, prompt,model,seed, APIKey,size):
-            
+    def FangZhouAPI(self,prompt, model, seed, APIKey, width,height, SecretAccessKey):
         client = Ark(
             # 此为默认路径，您可根据业务所在地域进行配置
             base_url="https://ark.cn-beijing.volces.com/api/v3",
@@ -185,8 +184,8 @@ class LuoT2I:
             model=model,
             prompt=prompt,
             response_format="b64_json",
-            size=size,
-            seed =seed,
+            size= f"{width}x{height}",
+            seed=seed,
         )
 
         b64_string = imagesResponse.data[0].b64_json
@@ -200,14 +199,14 @@ class LuoT2I:
 
         # 使用Pillow的Image模块打开这个“文件”
         image = Image.open(image_data)
-        
-         # --- 新增的转换代码 ---
+
+        # --- 新增的转换代码 ---
         # 1. 将 Pillow Image 转换为 NumPy 数组
         image_np = np.array(image).astype(np.float32) / 255.0
-        
+
         # 2. 将 NumPy 数组转换为 PyTorch Tensor
         image_tensor = torch.from_numpy(image_np)
-        
+
         # 3. 增加一个批次维度 (batch dimension)，ComfyUI 需要这个维度
         #    转换后的形状为 [1, 高度, 宽度, 通道数]
         image_tensor = image_tensor.unsqueeze(0)
@@ -215,6 +214,54 @@ class LuoT2I:
 
         # 返回符合 ComfyUI 格式的 Tensor
         return (image_tensor,)
+    
+    def JiMengAPI(self,prompt, model, seed, APIKey, width,height, SecretAccessKey):
+        visual_service = VisualService()
+        visual_service.set_ak(APIKey)
+        visual_service.set_sk(SecretAccessKey)
+
+        form = {
+        "req_key": model,
+        "prompt": prompt,
+        "seed": seed,
+        "width": width,
+        "height": height,
+        "use_pre_llm": True,
+        "use_sr": True,
+        "return_url": True,
+         }
+
+        reply = visual_service.cv_process(form)
+    
+        if reply and reply.get("code") == 10000:
+          print("\nAPI 调用成功，返回结果：")
+          print(json.dumps(reply, indent=4, ensure_ascii=False))
+          data = reply.get("data", {})
+          image_urls = data.get("image_urls")
+          
+          response = requests.get(image_urls[0])
+          response.raise_for_status()  # 检查请求是否成功
+
+          image_data = BytesIO(response.content)
+          pil_image = Image.open(image_data).convert("RGB")  # 确保是RGB格式
+
+          image_np = np.array(pil_image).astype(np.float32) / 255.0
+          image_tensor = torch.from_numpy(image_np)[None,]  # 添加 batch 维度
+          print(image_tensor)
+          return (image_tensor,)
+        elif response:
+          print(f"\nAPI 调用失败，错误码: {response.get('code')}, 错误信息: {response.get('message')}")
+          print(f"原始请求ID: {response.get('request_id')}")
+          return (None,)
+        else:
+          print("\nAPI 调用失败或返回空响应。")
+          return (None,)
+      
+    def test(self, prompt, model, seed, APIKey, width,height, SecretAccessKey):
+      if "doubao" in model:
+        return self.FangZhouAPI(prompt, model, seed, APIKey, width,height, SecretAccessKey)
+      else:
+        return self.JiMengAPI(prompt, model, seed, APIKey, width,height, SecretAccessKey)
 
     # @classmethod
     # def IS_CHANGED(s, image, string_field, int_field, float_field, print_to_screen):
@@ -222,4 +269,7 @@ class LuoT2I:
 
 
 # 注册节点
-NODE_CLASS_MAPPINGS = {"文生视频模型API_火山方舟": LuoT2V,"文生图片模型API_火山方舟":LuoT2I}
+NODE_CLASS_MAPPINGS = {
+    "文生视频模型API_火山引擎": LuoT2V,
+    "文生图片模型API_火山引擎": LuoT2I,
+}
