@@ -11,8 +11,11 @@ import torch
 import numpy as np
 from volcenginesdkarkruntime import Ark
 
-class LuoVideo:
-    modellist = ["ep-20250613134601-zz2rb"]
+class LuoT2V:
+    """
+    文生视频
+    """
+    modellist = ["doubao-seedance-1-0-pro-250528"]
     resolutionlist = ["480p", "720p", "1080p"]
     ratiolist = ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16", "9:21"]
     durationlist = [5, 10]
@@ -28,7 +31,8 @@ class LuoVideo:
                         "default": "请输入详细的画面描述，例如：戴着帽子的老爷爷面带微笑往前走。",
                     },
                 ),
-                "model": ("STRING", {"default": "请在此处粘贴您的火山引擎模型名称"}),
+                "model": ((s.modellist,)), 
+                # "model": ("STRING", {"default": "请在此处粘贴您的火山引擎模型名称"}),
                 "resolution": ((s.resolutionlist,)),  # 视频分辨率
                 "ratio": ((s.ratiolist,)),  # 生成视频的宽高比例
                 "duration": ((s.durationlist,)),  # 生成视频时长
@@ -78,7 +82,7 @@ class LuoVideo:
             ],
         )
         print(create_result)
-
+        video_url = None
         print("----- polling task status -----")
         task_id = create_result.id
         tokens_from_api = None
@@ -111,7 +115,10 @@ class LuoVideo:
             )
         }
 
-class LuoImage:
+class LuoT2I:
+    """
+    文生图
+    """
     def __init__(self):
         pass
     RESOLUTIONS = [
@@ -146,7 +153,8 @@ class LuoImage:
         return {
             "required": {
                 "prompt": ("STRING", {"multiline": True, "default": "请输入详细的画面描述，例如：一只可爱的猫咪，背景是星空。"}),
-                "model": ("STRING", {"default": "请在此处粘贴您的火山引擎模型名称"}),
+                # "model": ("STRING", {"default": "请在此处粘贴您的火山引擎模型名称"}),
+                "model": ((s.modellist,)), 
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffff}),
                 # "mode": (["固定", "递增", "递减", "随机"],),
                 "APIKey": ("STRING", {"default": "请在此处粘贴您的火山引擎API Key"}),#ae01b368-48a0-48df-9e49-5173741a1ef9
@@ -214,4 +222,4 @@ class LuoImage:
 
 
 # 注册节点
-NODE_CLASS_MAPPINGS = {"文生视频模型API_火山方舟": LuoVideo,"文生图片模型API_火山方舟":LuoImage}
+NODE_CLASS_MAPPINGS = {"文生视频模型API_火山方舟": LuoT2V,"文生图片模型API_火山方舟":LuoT2I}
